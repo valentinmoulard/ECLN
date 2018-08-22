@@ -134,6 +134,20 @@ def estim_encours_n_moins_1(row, col):
     return estim
 
 
+# fonction qui renvoie l'encours calculé à l'année (n)
+def estim_encours_n(row, col):
+    # on récupere les indice numérique en ligne et en colonne de la cellule 'encours' à calculer
+    # ligne contient les données nécéssaire qu calcul de l'encours à l'année n
+    ligne = data_commune_valide.iloc[[row] , [col-12, col-4, col-3, col-2, col-1]]
+    encours_n_moins_1 = int(ligne.iat[0,0])
+    mise_en_vente_n = int(ligne.iat[0,1])
+    reservation_n = int(ligne.iat[0,2])
+    annulation_n = int((ligne.iat[0,3]))
+    changement_dest_n = int(ligne.iat[0,4])
+    estim = encours_n_moins_1 + mise_en_vente_n - reservation_n + annulation_n + changement_dest_n
+    return estim
+
+
 # si pour une commune donnée, dans un dataframe groupé par code siren, il n'y a qu'une seule ligne qui a des données manquantes, alors on peut la calculer
 # dans un dataframe regroupant les communes par code siren, cette fonction cherche l'indice d'une ligne à calculer.
 # si cette ligne est la seule du dataframe à etre incomplete
@@ -173,17 +187,13 @@ def ligne_epci(compteur, name):
 
 # fonction estimation regle de trois
 def regle_de_trois(compteur, name, gb):
-    # gb.fillna(0, inplace = True)
     # gb est un sous groupe de commune ayant le meme code siren
     gb = gb.replace('nd', np.NaN)
     gb = gb.astype('float')
-    # gb = gb.replace('nd', 0)
-    # gb = gb.astype('int')
 
     # on recupere la ligne au niveau epci
     total_siren = ligne_epci(compteur, name)
     total_siren = total_siren.astype('float')
-    # total_siren = total_siren.astype('int')
 
     # on calcul la somme des MEV pour ce sous groupe
     somme_MEV = gb.iloc[:,0].sum()
@@ -333,29 +343,47 @@ for name in liste:
 print("--- %s seconds ---" % (time.time() - start_time))
 
 
-print(list(data_commune_valide.columns.values))
-# a tester
-print('\ncalcul de l\'encours avec les estimation de la regle de trois')
-for row in data_commune_valide.index:
-    for col in data_commune_valide:
-        # si on est dans une colonne 'encours'
-        if "Encours" in str(col):
-            # on récupere l'indice de la colonne qui nous servira dans les boucles suivantes
-            loc = data_commune_valide.columns.get_loc(str(col))
-            # condition pour ne pas dépasser la taille du dataframe en colonne
-            if loc < (len(data_commune_valide.columns)-12):
-                # vérifie si la ligne contenant les valeurs qui permettent de calculer l'encours (n-1) sont completes
-                if ligne_complete(data_commune_valide.iloc[[row] , [loc+8, loc+9, loc+10, loc+11, loc+12]]) == True :
-                    print("\n\n\n==========================")
-                    print("les données")
-                    print(data_commune_valide.iloc[[row] , [loc+8, loc+9, loc+10, loc+11, loc+12]])
-                    # calcul de l'encours n-1
-                    data_commune_valide.at[row, col] = estim_encours_n_moins_1(row, loc)
-                    print("le résultat")
-                    print(data_commune_valide.at[row, col])
 
-                    time.sleep(10)
-print("--- %s seconds ---" % (time.time() - start_time))
+
+#### derniere fonction en développement : calcul de l'encours apres les estimations de la regle de trois
+
+
+# fonction qui retourne un compteur qui permettra de trouver la colonne Encours à l'année correspondante au niveau commune
+# retourne -1 s'il n'y a pas de colonne Encours avec du volume au niveau epci
+# prend comme parametre l'index en ligne et le bom du code siren
+def cherche_encours_epci(row, name):
+    compteur = 0
+    for col in data_epci_valide:
+        if "Encours" in str(col):
+            compteur += 1
+            loc = data_epci_valide.columns.get_loc(str(col))
+            if data_epci_valide.iloc[[row],[loc]] != 'nd' and data_epci_valide.iloc[[row],[loc]] != np.NaN:
+                return compteur
+    return -1
+
+
+# fonction qui va vérifier s'il y a deja un encours sur la ligne/commune et si oui renvoie l'indice en colonne de l'encours
+# si la fonction ne trouve pas d'encours ayant un volume alors elle renvoie -1
+def cherche_encours_commune(row, df):
+    for col in df:
+        if "Encours" in str(col):
+            loc = df.columns.get_loc(str(col))
+            if df.iloc[[row],[loc]] != np.NaN and df.iloc[[row],[col]] != 'nd':
+                return col
+    return -1
+
+
+# fonction qui calcul les encours des années précédentes et suivantes en fonction de l'indice en colonne de l'encours trouvé
+def calcul_encours_commune(row, col):
+    for col in data_commune_valide:
+        if "Encours" in str(col):
+            loc = df.columns.get_loc(str(col))
+            if loc < col:
+                # calcul de l'encours année précédente
+
+            elif loc > col:
+                # calcul de l'encours année suivante
+                
 
 
 print("ok")
