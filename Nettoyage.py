@@ -43,7 +43,7 @@ def clean_title (x):
     else:
         return (x + '.' + str(2005))
 
-# fonction qui renomme les colonnes
+# fonction de renommage des colonnes
 def clean_columns_names():
     i = 7
     while i < len(data_commune.columns):
@@ -81,7 +81,7 @@ data_commune_valide = data_commune_valide.replace('//',0)
 
 ## TRAITEMENT
 
-# on remplacer les 'nd' par des cellules vides, ce sont des données à estimer
+# on remplace les 'nd' par des cellules vides, ce sont des données à estimer
 data_commune_valide = data_commune_valide.replace('nd',np.NaN)
 data_epci_valide = data_epci_valide.replace('nd',np.NaN)
 # on convertit les données en float pour qu'elles soient adaptées aux fonctions utilisées plus bas
@@ -107,8 +107,8 @@ data_commune_valide.index = range(len(data_commune_valide.index))
 
 # fonction qui renvoie False si une ligne possede une valeur nulle (NaN)
 def ligne_complete(x):
-    # retourne True si la ligne est complete
-    # s'il y a une valeur vide ou plus dans la ligne ou si la valeur est 'nd' ou si la valeur est NaN, on renvoie False
+    # retourne True si la ligne est a des données completes
+    # s'il y a une ou plisieurs cellules vides sur la ligne, si la valeur est 'nd' ou NaN, on renvoie False
     for i in range(len(x.columns)):
         if x.iat[0,i] == 'nd':
             return False
@@ -119,10 +119,10 @@ def ligne_complete(x):
     return True
 
 
-# fonction qui renvoie l'encours calculé à l'année (n-1)
+# fonction qui renvoie l'encours calculé pour l'année (n-1)
 def estim_encours_n_moins_1(row, col):
-    # on récupere les indice numérique en ligne et en colonne de la cellule 'encours' à calculer
-    # ligne contient les données nécéssaire qu calcul de l'encours à l'année n-1
+    # on récupere les indices numériques en ligne et en colonne de la cellule 'encours' à calculer
+    # la variable 'ligne' contient les données nécéssaires au calcul de l'encours de l'année n-1
     ligne = data_commune_valide.iloc[[row] , [col+8, col+9, col+10, col+11, col+12]]
     encours_n = int(ligne.iat[0,4])
     mise_en_vente_n = int(ligne.iat[0,0])
@@ -134,10 +134,10 @@ def estim_encours_n_moins_1(row, col):
     return estim
 
 
-# fonction qui renvoie l'encours calculé à l'année (n)
+# fonction qui renvoie l'encours calculé pour l'année (n)
 def estim_encours_n(row, col):
-    # on récupere les indice numérique en ligne et en colonne de la cellule 'encours' à calculer
-    # ligne contient les données nécéssaire qu calcul de l'encours à l'année n
+    # on récupere les indices numériques en ligne et en colonne de la cellule 'encours' à calculer
+    # la variable 'ligne' contient les données nécéssaires au calcul de l'encours de l'année n
     ligne = data_commune_valide.iloc[[row] , [col-12, col-4, col-3, col-2, col-1]]
     encours_n_moins_1 = int(ligne.iat[0,0])
     mise_en_vente_n = int(ligne.iat[0,1])
@@ -148,10 +148,10 @@ def estim_encours_n(row, col):
     return estim
 
 
-# si pour une commune donnée, dans un dataframe groupé par code siren, il n'y a qu'une seule ligne qui a des données manquantes, alors on peut la calculer
-# dans un dataframe regroupant les communes par code siren, cette fonction cherche l'indice d'une ligne à calculer.
-# si cette ligne est la seule du dataframe à etre incomplete
+# Si, dans un regroupement de commune par code siren, une seule ligne présente des données manquantes, 
+# on peut la déterminer grâce à la ligne au niveau EPCI ayant le même code siren.
 def estim_derniere_ligne(gb):
+    # gb est un sous dataframe du dataframe original. gb est un regroupement par code siren.
     tmp = True
     # compte sert à compter le nombre de ligne dont les valeurs sont incompletes
     compte = 0
@@ -165,6 +165,7 @@ def estim_derniere_ligne(gb):
     # alors on renvoie l'indice de cette ligne pour la calculer
     if tmp == False and compte == 1:
         return ligne
+    # s'il y a trop de ligne manquantes (compte > 1) ou si le dataframe est complet (tmp == True), on retourne -1
     else:
         return -1
 
@@ -172,7 +173,7 @@ def estim_derniere_ligne(gb):
 # fonction qui renvoie la ligne epci correspondant à un groupe de commune par code siren
 def ligne_epci(compteur, name):
     # name est le code siren des communes dont on cherche la ligne epci correspondante
-    # compteur et compteur_epci servent à sélectionner la bonne année
+    # compteur et compteur_epci servent à sélectionner l'année correspondante
     compteur_epci = compteur
     for col_epci in data_epci_valide:
         if "MEV" in str(col_epci):
@@ -185,7 +186,7 @@ def ligne_epci(compteur, name):
                 return (total_siren)
 
 
-# fonction estimation regle de trois
+# fonction d'estimation avec la regle de trois
 def regle_de_trois(compteur, name, gb):
     # gb est un sous groupe de commune ayant le meme code siren
     gb = gb.replace('nd', np.NaN)
@@ -205,9 +206,9 @@ def regle_de_trois(compteur, name, gb):
         tab_proportion = gb.iloc[:,0].apply(lambda x : x/somme_MEV)
         # pour chacune des colonnes du sous groupe, on multiplie chaque valeurs par les valeur de la colonne 'proportion'
         # sauf pour les colonnes MEV et Encours (les MEV ne sont pas soumises au secret statistique et l'Ecnours est à calculer à partir de la formule)
-        #  on itère sur les colonnes de gb
+        # on itère sur les colonnes de gb
         for col in gb:
-            #  on réalise les estimations pour toutes les colonnes sauf les MEV et Encours
+            # on réalise les estimations pour toutes les colonnes sauf les MEV et Encours
             if not "MEV" in str(col):
                 if not "cours" in str(col):
                     # multiplication/regle de trois
@@ -344,8 +345,39 @@ print("--- %s seconds ---" % (time.time() - start_time))
 
 
 
+#### FONCTION EN DEVELOPPEMENT : calcul de l'encours apres les estimations de la regle de trois
 
-#### derniere fonction en développement : calcul de l'encours apres les estimations de la regle de trois
+# fonction qui va vérifier s'il y a deja un encours sur la ligne/commune et si oui renvoie l'indice en colonne de l'encours
+# si la fonction ne trouve pas d'encours ayant un volume alors elle renvoie -1
+def cherche_encours_commune(row, df):
+    for col in df:
+        if "Encours" in str(col):
+            loc = df.columns.get_loc(str(col))
+            if df.iloc[[row],[loc]] != np.NaN and df.iloc[[row],[col]] != 'nd':
+                return col
+    return -1
+
+
+# fonction qui calcule les encours des années précédentes et suivantes en fonction de l'indice en colonne de l'encours trouvé
+def calcul_encours_commune(row, col):
+    # > a 18 car on ne prend pas en compte les parametre tel que les noms de departements etc
+    # < taille du dataframe en colonne pour ne pas dépasser le tableau
+    if col > 18 and col < data_commune_valide.shape[1] - 12
+    # techniquement on devrait retomber sur les colonnes encours pour les calculer
+
+    # estimation des encours des années précédant l'année à l'indice col
+    # on commence a col-12 pour ne pas recalculer l'encours qu'on possede deja
+    # on s'arrete à 11 (début du dataframe)
+    # avec un pas de -12 pour retomber sur les colonnes encours
+    for i in range(col-12, 11, -12):
+        estim_encours_n_moins_1(row, i)
+
+    # estimation des encours des années suivant l'année à l'indice col
+    # on commence a col+12 pour ne pas recalculer l'encours qu'on possede deja
+    # on s'arrete à la longueur du dataframe (fin du dataframe)
+    # avec un pas de +12 pour retomber sur les colonnes encours
+    for i in range(col+12, data_commune_valide.shape[1], 12):
+        estim_encours_n(row, i)
 
 
 # fonction qui retourne un compteur qui permettra de trouver la colonne Encours à l'année correspondante au niveau commune
@@ -361,29 +393,39 @@ def cherche_encours_epci(row, name):
                 return compteur
     return -1
 
+# fonction qui retourne le code siren d'une commune
+# sert pour pouvoir cherche la ligne epci qui correspond à la commune
+def code_siren(row):
+    return data_commune_valide.iloc[[row],[5]]
 
-# fonction qui va vérifier s'il y a deja un encours sur la ligne/commune et si oui renvoie l'indice en colonne de l'encours
-# si la fonction ne trouve pas d'encours ayant un volume alors elle renvoie -1
-def cherche_encours_commune(row, df):
-    for col in df:
-        if "Encours" in str(col):
-            loc = df.columns.get_loc(str(col))
-            if df.iloc[[row],[loc]] != np.NaN and df.iloc[[row],[col]] != 'nd':
-                return col
-    return -1
-
-
-# fonction qui calcul les encours des années précédentes et suivantes en fonction de l'indice en colonne de l'encours trouvé
-def calcul_encours_commune(row, col):
-    for col in data_commune_valide:
-        if "Encours" in str(col):
-            loc = df.columns.get_loc(str(col))
-            if loc < col:
-                # calcul de l'encours année précédente
-
-            elif loc > col:
-                # calcul de l'encours année suivante
+##### A TESTER
+# on parcours toutes les lignes du dataframe
+# for row in data_commune_valide.index:
+#     # s'il y a deja un encours on détermine les encours des autres années
+#     indice_colonne = cherche_encours_commune(row, data_commune_valide)
+#     if indice_colonne != -1:
+#         calcul_encours_commune(row, indice_colonne)
+#     # sinon on applique la regle de trois
+#     else:
+#         # on récupère le code siren de la commune tritée pour chercher la ligne epci correspondante
+#         siren = code_siren(row)
+#         # compteur sert a retrouver l'année correspondante
+#         compteur = 0
+#         # on parcours toutes les colonnes du dataframes
+#         for col in data_commune_valide:
+#             if "Encours" in str(col):
+#                 # on récupère l'indice numérique de la colonne
+#                 loc = data_epci_valide.columns.get_loc(str(col))
+#                 compteur += 1
+#                 # on récupere la ligne epci
+#                 epci = ligne_epci(compteur, siren)
+#                 # on vérifie s'il y a un volume dans la colonne encours
+#                 # si oui on applique la règle de trois
+#                 if epci.iloc[:,4] != 0 and epci.iloc[:,4] != np.NaN epci.iloc[:,4] != 'nd':
+#                     # on calcul la part de mise en vente de la commune sur les mise en vente de l'epci
+#                     part = data_commune_valide.iloc[[row],[loc - 4]]/epci.iloc[:,0]
+#                     # on calcul l'encours
+#                     data_commune_valide.iloc[[row],[loc]] = part * epci.iloc[:,4]
                 
 
-
-print("ok")
+#####
