@@ -281,8 +281,8 @@ print("--- %s seconds ---" % (time.time() - start_time))
 
 
 print('\ncalcul de la derniere ligne')
-# Calcul de la derniere ligne si dans un regroupement de communes au niveau par code siren, une seule ligne est manquante
-# pour chaque code siren unique présente dans niveau_commune
+# Calcul de la derniere ligne si, dans un regroupement de communes par code siren, une seule ligne est manquante
+# pour chaque code siren unique présent dans niveau_commune
 for name in liste:
     # on constitue des groupes par code siren
     groupe = gb.get_group(name)
@@ -398,34 +398,35 @@ def cherche_encours_epci(row, name):
 def code_siren(row):
     return data_commune_valide.iloc[[row],[5]]
 
-##### A TESTER
+
+#### A TESTER
+
 # on parcours toutes les lignes du dataframe
-# for row in data_commune_valide.index:
-#     # s'il y a deja un encours on détermine les encours des autres années
-#     indice_colonne = cherche_encours_commune(row, data_commune_valide)
-#     if indice_colonne != -1:
-#         calcul_encours_commune(row, indice_colonne)
-#     # sinon on applique la regle de trois
-#     else:
-#         # on récupère le code siren de la commune tritée pour chercher la ligne epci correspondante
-#         siren = code_siren(row)
-#         # compteur sert a retrouver l'année correspondante
-#         compteur = 0
-#         # on parcours toutes les colonnes du dataframes
-#         for col in data_commune_valide:
-#             if "Encours" in str(col):
-#                 # on récupère l'indice numérique de la colonne
-#                 loc = data_epci_valide.columns.get_loc(str(col))
-#                 compteur += 1
-#                 # on récupere la ligne epci
-#                 epci = ligne_epci(compteur, siren)
-#                 # on vérifie s'il y a un volume dans la colonne encours
-#                 # si oui on applique la règle de trois
-#                 if epci.iloc[:,4] != 0 and epci.iloc[:,4] != np.NaN epci.iloc[:,4] != 'nd':
-#                     # on calcul la part de mise en vente de la commune sur les mise en vente de l'epci
-#                     part = data_commune_valide.iloc[[row],[loc - 4]]/epci.iloc[:,0]
-#                     # on calcul l'encours
-#                     data_commune_valide.iloc[[row],[loc]] = part * epci.iloc[:,4]
-                
+for row in data_commune_valide.index:
+    # s'il y a deja un encours on détermine les encours des autres années
+    indice_colonne = cherche_encours_commune(row, data_commune_valide)
+    if indice_colonne != -1:
+        calcul_encours_commune(row, indice_colonne)
+    # sinon on applique la regle de trois
+    else:
+        # on récupère le code siren de la commune tritée pour chercher la ligne epci correspondante
+        siren = code_siren(row)
+        # compteur sert a retrouver l'année correspondante
+        compteur = 0
+        # on parcours toutes les colonnes du dataframes
+        for col in data_commune_valide:
+            if "Encours" in str(col):
+                # on récupère l'indice numérique de la colonne
+                loc = data_epci_valide.columns.get_loc(str(col))
+                compteur += 1
+                # on récupere la ligne epci
+                epci = ligne_epci(compteur, siren)
+                # on vérifie s'il y a un volume dans la colonne encours
+                # si oui on applique la règle de trois
+                if epci.iloc[:,4] != 0 and epci.iloc[:,4] != np.NaN epci.iloc[:,4] != 'nd':
+                    # on calcul la part de mise en vente de la commune sur les mise en vente de l'epci
+                    part = data_commune_valide.iloc[[row],[loc - 4]]/epci.iloc[:,0]
+                    # on calcul l'encours
+                    data_commune_valide.iloc[[row],[loc]] = part * epci.iloc[:,4]
 
 #####
